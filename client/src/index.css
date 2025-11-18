@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Courier New', 'Monaco', 'Consolas', monospace;
+  background: #0a0a0a;
+  color: #ff00ff;
+  overflow-x: hidden;
+  position: relative;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  cursor: none; /* Hide default cursor */
+}
+
+/* Custom rotating cursor */
+.custom-cursor {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ff00ff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99999;
+  transform-origin: center center;
+  transition: transform 0.1s ease-out;
+  box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+}
+
+.custom-cursor::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 8px;
+  background: #ff00ff;
+  transform: translate(-50%, -50%) rotate(0deg);
+  transform-origin: center bottom;
+}
+
+.custom-cursor::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 8px;
+  background: #ff00ff;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center bottom;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(255, 0, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(255, 0, 255, 0.03) 0%, transparent 50%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 0, 255, 0.02) 0px,
+      transparent 1px,
+      transparent 2px,
+      rgba(255, 0, 255, 0.02) 3px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Hardware/Computing style enhancements */
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+.scan-line {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 0, 255, 0.5),
+    transparent
+  );
+  animation: scan 3s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Terminal cursor blink */
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Glitch effect for hardware feel */
+@keyframes glitch {
+  0% {
+    text-shadow: 
+      2px 0 #ff00ff,
+      -2px 0 #00ffff;
+  }
+  50% {
+    text-shadow: 
+      -2px 0 #ff00ff,
+      2px 0 #00ffff;
+  }
+  100% {
+    text-shadow: 
+      2px 0 #ff00ff,
+      -2px 0 #00ffff;
+  }
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(255, 0, 255, 0.3);
+  color: #ff00ff;
+}
+
+::-moz-selection {
+  background: rgba(255, 0, 255, 0.3);
+  color: #ff00ff;
+}
+

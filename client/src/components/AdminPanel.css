@@ -1,0 +1,343 @@
+.admin-container {
+  min-height: 100vh;
+  background: #0a0a0a;
+  padding: 20px;
+  color: #ff00ff;
+}
+
+.admin-header {
+  margin-bottom: 30px;
+}
+
+.terminal-header {
+  background: #1a1a1a;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border: 2px solid #ff00ff;
+  box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+}
+
+.terminal-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.btn.red {
+  background: #ff5f56;
+}
+
+.btn.yellow {
+  background: #ffbd2e;
+}
+
+.btn.green {
+  background: #27c93f;
+}
+
+.terminal-title {
+  color: #ff00ff;
+  font-size: 12px;
+  letter-spacing: 1px;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+}
+
+.admin-user-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: rgba(255, 0, 255, 0.05);
+  border-left: 2px solid #ff00ff;
+  border-right: 2px solid #ff00ff;
+  color: #ff00ff;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid #ff00ff;
+  color: #ff00ff;
+  padding: 5px 15px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 0, 0, 0.2);
+  border-color: #ff4444;
+  color: #ff4444;
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #333;
+}
+
+.tab-button {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #888;
+  padding: 15px 30px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-button:hover {
+  color: #ff00ff;
+  border-bottom-color: #ff00ff;
+}
+
+.tab-button.active {
+  color: #ff00ff;
+  border-bottom-color: #ff00ff;
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+}
+
+.admin-content {
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  border: 2px solid #ff00ff;
+  box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
+  padding: 30px;
+  min-height: 500px;
+}
+
+.admin-content h2 {
+  color: #ff00ff;
+  font-size: 24px;
+  margin-bottom: 30px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+}
+
+.admin-content h3 {
+  color: #ff00ff;
+  font-size: 18px;
+  margin: 20px 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.admin-form {
+  margin-bottom: 40px;
+  padding: 20px;
+  background: rgba(255, 0, 255, 0.05);
+  border: 1px solid #333;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-group label {
+  display: block;
+  color: #ff00ff;
+  font-size: 12px;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.admin-input,
+.admin-textarea {
+  width: 100%;
+  background: #0a0a0a;
+  border: 1px solid #ff00ff;
+  color: #ff00ff;
+  padding: 10px 15px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.admin-input:focus,
+.admin-textarea:focus {
+  box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+  border-color: #ff00ff;
+}
+
+.admin-textarea {
+  resize: vertical;
+  min-height: 200px;
+}
+
+.admin-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: #ff00ff;
+}
+
+.admin-button {
+  background: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
+  color: #0a0a0a;
+  border: none;
+  padding: 12px 25px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+}
+
+.admin-button:hover {
+  background: linear-gradient(135deg, #ff00ff 0%, #ff00ff 100%);
+  box-shadow: 0 0 25px rgba(255, 0, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.admin-button.secondary {
+  background: transparent;
+  color: #ff00ff;
+  border: 2px solid #ff00ff;
+}
+
+.admin-button.secondary:hover {
+  background: rgba(255, 0, 255, 0.1);
+}
+
+.admin-button.small {
+  padding: 8px 15px;
+  font-size: 12px;
+}
+
+.admin-button.delete {
+  background: transparent;
+  color: #ff4444;
+  border: 1px solid #ff4444;
+}
+
+.admin-button.delete:hover {
+  background: rgba(255, 68, 68, 0.2);
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.banners-list,
+.pages-section {
+  margin-top: 40px;
+}
+
+.banner-item,
+.page-item {
+  background: rgba(255, 0, 255, 0.05);
+  border: 1px solid #333;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.banner-preview {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.banner-info {
+  flex: 1;
+}
+
+.banner-info p {
+  color: #888;
+  font-size: 12px;
+  margin: 5px 0;
+}
+
+.banner-info strong {
+  color: #ff00ff;
+}
+
+.banner-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.banner-editor,
+.page-editor {
+  padding: 20px;
+  background: rgba(255, 0, 255, 0.1);
+  border: 1px solid #ff00ff;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.page-header h3 {
+  margin: 0;
+  color: #ff00ff;
+}
+
+.page-content-preview {
+  color: #888;
+  font-size: 12px;
+  white-space: pre-wrap;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.6;
+  background: #0a0a0a;
+  padding: 15px;
+  border: 1px solid #333;
+}
+
+.admin-box {
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  border: 2px solid #ff00ff;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
+}
+
+.admin-box h1 {
+  color: #ff00ff;
+  font-size: 32px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+
+.admin-box p {
+  color: #888;
+  font-size: 16px;
+}
+
