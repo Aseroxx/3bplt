@@ -6,6 +6,22 @@ import BookMenu from './BookMenu';
 import './DesignMode.css';
 import './BookMenu.css';
 
+// Helper function to build full URL for assets (fonts, images)
+const buildAssetUrl = (path) => {
+  if (!path) return path;
+  // If path is already a full URL (starts with http:// or https://), return as is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  // If path starts with /, it's a relative path - prepend API base URL
+  if (path.startsWith('/')) {
+    const apiBaseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+    return apiBaseUrl + path;
+  }
+  // Otherwise return as is
+  return path;
+};
+
 const DesignMode = ({ onExit, pages: bookPagesProp, banners: bannersProp, textStyles: textStylesProp, siteTexts: siteTextsProp }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -156,8 +172,10 @@ const DesignMode = ({ onExit, pages: bookPagesProp, banners: bannersProp, textSt
             return;
           }
           
+          // Build full URL for font file using helper function
+          const fontUrl = buildAssetUrl(font.file_path);
           // Encode the file path to handle spaces and special characters
-          const encodedPath = encodeURI(font.file_path);
+          const encodedPath = encodeURI(fontUrl);
           
           const fontFace = new FontFace(
             font.font_family,
@@ -2993,7 +3011,7 @@ const DesignElement = ({ element, isSelected, onClick, onMouseDown, onContextMen
     return (
       <div style={baseStyle}>
         <img
-          src={element.url}
+          src={buildAssetUrl(element.url)}
           alt="Design element"
           style={{
             ...contentStyle,
@@ -4029,7 +4047,7 @@ const BookMenuEditable = ({ pages = [], banners = [], user, textStyles = [], edi
               </div>
             ) : banner.type === 'gif' || banner.type === 'image' ? (
               <img
-                src={banner.url}
+                src={buildAssetUrl(banner.url)}
                 alt="Banner"
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />

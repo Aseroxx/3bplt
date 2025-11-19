@@ -1221,38 +1221,141 @@ app.put('/api/admin/page-text-styles/:pageNumber/:elementType', authenticateToke
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const sharp = require('sharp');
 
-// Create uploads directories if they don't exist
+// Configure Cloudinary - REQUIRED for cloud storage
+const useCloudinary = process.env.CLOUDINARY_CLOUD_NAME && 
+                      process.env.CLOUDINARY_API_KEY && 
+                      process.env.CLOUDINARY_API_SECRET;
+
+// Debug: Log environment variables (without showing secrets)
+console.log('🔍 Cloudinary Configuration Check:');
+console.log('   CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? '✅ Set' : '❌ Missing');
+console.log('   CLOUDINARY_API_KEY:', process.env.CLOUDINARY_API_KEY ? '✅ Set' : '❌ Missing');
+console.log('   CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? '✅ Set' : '❌ Missing');
+
+if (useCloudinary) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+  console.log('✅ Cloudinary configured - using cloud storage with optimization');
+  console.log('   Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME);
+  console.log('   API Key:', process.env.CLOUDINARY_API_KEY);
+} else {
+  console.log('⚠️  Cloudinary not configured - using local storage');
+  console.log('   Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to use cloud storage');
+}
+
+// Create uploads directories if they don't exist (fallback for local storage)
 const uploadsDir = path.join(__dirname, 'uploads');
 const fontsDir = path.join(uploadsDir, 'fonts');
 const imagesDir = path.join(uploadsDir, 'images');
 
-if (!fs.existsSync(fontsDir)) {
-  fs.mkdirSync(fontsDir, { recursive: true });
-}
-if (!fs.existsSync(imagesDir)) {
-  fs.mkdirSync(imagesDir, { recursive: true });
+if (!useCloudinary) {
+  if (!fs.existsSync(fontsDir)) {
+    fs.mkdirSync(fontsDir, { recursive: true });
+  }
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
 }
 
-const fontStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, fontsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueName);
+// Helper function to upload to Cloudinary
+const uploadToCloudinary = async (buffer, folder, options = {}) => {
+  console.log(`🚀 uploadToCloudinary called - folder: ${folder}, buffer size: ${(buffer.length / 1024).toFixed(2)} KB`);
+  
+  if (!useCloudinary) {
+    console.error('❌ Cloudinary is not configured in uploadToCloudinary');
+    throw new Error('Cloudinary is not configured');
   }
-});
 
-const imageStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, imagesDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueName);
+  console.log('☁️  Starting Cloudinary upload stream...');
+  return new Promise((resolve, reject) => {
+    const uploadOptions = {
+      folder: folder,
+      resource_type: 'auto',
+      use_filename: false,
+      unique_filename: true,
+      overwrite: false,
+      ...options
+    };
+
+    console.log('   Upload options:', JSON.stringify(uploadOptions, null, 2));
+
+    const uploadStream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+      if (error) {
+        console.error('❌ Cloudinary upload stream error:', error);
+        console.error('   Error message:', error.message);
+        console.error('   Error http_code:', error.http_code);
+        reject(error);
+      } else {
+        console.log(`✅ Uploaded to Cloudinary: ${result.secure_url}`);
+        console.log('   Result:', JSON.stringify({
+          public_id: result.public_id,
+          format: result.format,
+          bytes: result.bytes,
+          width: result.width,
+          height: result.height
+        }, null, 2));
+        resolve(result);
+      }
+    });
+    
+    uploadStream.end(buffer);
+    console.log('   Buffer sent to upload stream');
+  });
+};
+
+// Helper function to optimize image before upload
+const optimizeImage = async (buffer, maxWidth = 1920, quality = 85) => {
+  try {
+    const image = sharp(buffer);
+    const metadata = await image.metadata();
+    
+    // Resize if too large
+    if (metadata.width > maxWidth) {
+      image.resize(maxWidth, null, { withoutEnlargement: true });
+    }
+    
+    // Convert to WebP for better compression (fallback to JPEG if WebP not supported)
+    return await image
+      .webp({ quality: quality })
+      .toBuffer()
+      .catch(() => image.jpeg({ quality: quality }).toBuffer());
+  } catch (error) {
+    console.error('Image optimization error:', error);
+    return buffer; // Return original if optimization fails
   }
-});
+};
+
+// Multer storage configuration
+// Use memory storage for Cloudinary, disk storage for local fallback
+const fontStorage = useCloudinary 
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, fontsDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${file.originalname}`;
+        cb(null, uniqueName);
+      }
+    });
+
+const imageStorage = useCloudinary
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, imagesDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${file.originalname}`;
+        cb(null, uniqueName);
+      }
+    });
 
 const fontUpload = multer({ 
   storage: fontStorage,
@@ -1329,7 +1432,53 @@ app.post('/api/admin/fonts', authenticateToken, fontUpload.single('font'), async
     }
 
     const { name } = req.body;
-    const filePath = `/uploads/fonts/${req.file.filename}`;
+    let filePath;
+    
+    // Get file buffer (from memory storage) or read from disk
+    let fileBuffer;
+    if (req.file.buffer) {
+      fileBuffer = req.file.buffer;
+    } else {
+      // Read from disk if using disk storage
+      fileBuffer = fs.readFileSync(req.file.path);
+    }
+    
+    // Upload to Cloudinary (preferred) or use local storage as fallback
+    console.log('🔍 Font upload check - useCloudinary:', useCloudinary);
+    if (useCloudinary) {
+      console.log('☁️  Attempting to upload font to Cloudinary...');
+      try {
+        const result = await uploadToCloudinary(fileBuffer, 'fonts', {
+          public_id: `font_${Date.now()}_${req.file.originalname.replace(/\.(ttf|otf)$/i, '')}`,
+          resource_type: 'raw', // Fonts are raw files
+          format: 'ttf' // Preserve font format
+        });
+        filePath = result.secure_url;
+        console.log('✅ Font uploaded to Cloudinary:', filePath);
+        // Clean up temporary file if using disk storage
+        if (req.file.path && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (cloudinaryError) {
+        console.error('❌ Cloudinary upload failed:', cloudinaryError);
+        console.error('   Error details:', cloudinaryError.message);
+        console.error('   Stack:', cloudinaryError.stack);
+        // Fallback to local storage only if Cloudinary fails
+        console.log('⚠️  Falling back to local storage...');
+        const uniqueName = `${Date.now()}-${req.file.originalname}`;
+        const localPath = path.join(fontsDir, uniqueName);
+        if (!fs.existsSync(localPath)) {
+          fs.writeFileSync(localPath, fileBuffer);
+        }
+        filePath = `/uploads/fonts/${uniqueName}`;
+        console.log('📁 Font saved locally (Cloudinary fallback):', filePath);
+      }
+    } else {
+      // Local storage only (Cloudinary not configured)
+      console.log('📁 Cloudinary not configured, using local storage');
+      filePath = `/uploads/fonts/${req.file.filename}`;
+      console.log('📁 Font saved locally:', filePath);
+    }
     
     // Clean font name: remove extension and sanitize
     let fontFamily = name || req.file.originalname.replace(/\.(ttf|otf)$/i, '');
@@ -1373,17 +1522,100 @@ app.post('/api/admin/fonts', authenticateToken, fontUpload.single('font'), async
 
 // Image upload endpoint
 app.post('/api/admin/images', authenticateToken, imageUpload.single('image'), async (req, res) => {
+  console.log('📤 Image upload endpoint called');
+  console.log('   File received:', req.file ? `${req.file.originalname} (${(req.file.size / 1024).toFixed(2)} KB)` : 'NO FILE');
+  console.log('   useCloudinary status:', useCloudinary);
+  
   try {
     if (req.user.role !== 'admin') {
+      console.log('❌ Admin access required');
       return res.status(403).json({ error: 'Admin access required' });
     }
 
     if (!req.file) {
+      console.log('❌ No file provided');
       return res.status(400).json({ error: 'Image file is required' });
     }
 
-    const filePath = `/uploads/images/${req.file.filename}`;
+    let filePath;
+    
+    // Get file buffer (from memory storage) or read from disk
+    let originalBuffer;
+    if (req.file.buffer) {
+      originalBuffer = req.file.buffer;
+    } else {
+      // Read from disk if using disk storage
+      originalBuffer = fs.readFileSync(req.file.path);
+    }
+    
+    let optimizedBuffer = originalBuffer;
 
+    // Optimize image before upload (reduce size)
+    if (req.file.mimetype.startsWith('image/') && !req.file.mimetype.includes('svg')) {
+      try {
+        optimizedBuffer = await optimizeImage(originalBuffer, 1920, 85);
+        console.log('Image optimized:', {
+          original: (originalBuffer.length / 1024).toFixed(2) + ' KB',
+          optimized: (optimizedBuffer.length / 1024).toFixed(2) + ' KB',
+          reduction: ((1 - optimizedBuffer.length / originalBuffer.length) * 100).toFixed(1) + '%'
+        });
+      } catch (optError) {
+        console.error('Image optimization error:', optError);
+        optimizedBuffer = originalBuffer; // Use original if optimization fails
+      }
+    }
+
+    // Upload to Cloudinary (preferred) or use local storage as fallback
+    console.log('🔍 Upload check - useCloudinary:', useCloudinary);
+    if (useCloudinary) {
+      console.log('☁️  Attempting to upload to Cloudinary...');
+      try {
+        const result = await uploadToCloudinary(optimizedBuffer, 'images', {
+          public_id: `img_${Date.now()}`,
+          format: 'auto', // Auto format (WebP if supported by browser)
+          quality: 'auto:good', // Auto quality optimization (good balance)
+          fetch_format: 'auto', // Serve best format for browser
+          transformation: [
+            { width: 1920, crop: 'limit' }, // Max width 1920px
+            { quality: 'auto:good' } // Auto quality
+          ]
+        });
+        filePath = result.secure_url;
+        console.log('✅ Image uploaded to Cloudinary (optimized):', filePath);
+        console.log('   Format:', result.format, '| Size:', (result.bytes / 1024).toFixed(2), 'KB');
+        // Clean up temporary file if using disk storage
+        if (req.file.path && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (cloudinaryError) {
+        console.error('❌ Cloudinary upload failed:', cloudinaryError);
+        console.error('   Error details:', cloudinaryError.message);
+        console.error('   Stack:', cloudinaryError.stack);
+        // Fallback to local storage only if Cloudinary fails
+        console.log('⚠️  Falling back to local storage...');
+        const uniqueName = `${Date.now()}-${req.file.originalname}`;
+        const localPath = path.join(imagesDir, uniqueName);
+        if (!fs.existsSync(localPath)) {
+          fs.writeFileSync(localPath, optimizedBuffer);
+        }
+        filePath = `/uploads/images/${uniqueName}`;
+        console.log('📁 Image saved locally (Cloudinary fallback):', filePath);
+      }
+    } else {
+      // Local storage with optimized image (Cloudinary not configured)
+      console.log('📁 Cloudinary not configured, using local storage');
+      const uniqueName = `${Date.now()}-${req.file.originalname}`;
+      const localPath = path.join(imagesDir, uniqueName);
+      if (!fs.existsSync(localPath)) {
+        fs.writeFileSync(localPath, optimizedBuffer);
+      }
+      filePath = `/uploads/images/${uniqueName}`;
+      console.log('📁 Image saved locally (optimized):', filePath);
+    }
+
+    console.log('📤 Sending response - filePath:', filePath);
+    console.log('   Is Cloudinary URL?', filePath && filePath.startsWith('https://res.cloudinary.com'));
+    
     res.status(201).json({
       message: 'Image uploaded successfully',
       image: { url: filePath, path: filePath }

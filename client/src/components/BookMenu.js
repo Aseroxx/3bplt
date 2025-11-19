@@ -37,6 +37,22 @@ const getVisualEffectsStyles = (banner) => {
   return styles;
 };
 
+// Helper function to build full URL for assets (fonts, images)
+const buildAssetUrl = (path) => {
+  if (!path) return path;
+  // If path is already a full URL (starts with http:// or https://), return as is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  // If path starts with /, it's a relative path - prepend API base URL
+  if (path.startsWith('/')) {
+    const apiBaseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+    return apiBaseUrl + path;
+  }
+  // Otherwise return as is
+  return path;
+};
+
 const BookMenu = ({ designMode, selectedTextElement, onTextElementClick, onTextElementMouseDown, onTextElementContextMenu, pages: pagesProp, banners: bannersProp, textStyles: textStylesProp, siteTexts: siteTextsProp }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -103,8 +119,10 @@ const BookMenu = ({ designMode, selectedTextElement, onTextElementClick, onTextE
       const response = await axios.get('/api/fonts');
       const fonts = response.data.fonts || [];
       fonts.forEach(font => {
+        // Build full URL for font file using helper function
+        const fontUrl = buildAssetUrl(font.file_path);
         // Encode the file path to handle spaces and special characters
-        const encodedPath = encodeURI(font.file_path);
+        const encodedPath = encodeURI(fontUrl);
         
         const fontFace = new FontFace(
           font.font_family,
@@ -112,8 +130,9 @@ const BookMenu = ({ designMode, selectedTextElement, onTextElementClick, onTextE
         );
         fontFace.load().then(loadedFont => {
           document.fonts.add(loadedFont);
+          console.log('Font loaded successfully:', font.font_family);
         }).catch(err => {
-          console.error('Error loading font:', err);
+          console.error('Error loading font:', font.font_family, err);
         });
       });
     } catch (error) {
@@ -953,7 +972,7 @@ const BookMenu = ({ designMode, selectedTextElement, onTextElementClick, onTextE
                                         }}></div>
                                       )}
                                       <img
-                                        src={banner.url}
+                                        src={buildAssetUrl(banner.url)}
                                         alt="Page element"
                                         style={{
                                           width: '100%',
@@ -1069,11 +1088,18 @@ const BookMenu = ({ designMode, selectedTextElement, onTextElementClick, onTextE
 
       <div className="circuit-overlay"></div>
       
-      {/* Banners overlay - only show GLOBAL elements (page_number IS NULL) if not in design mode */}
+      {/* Banners overlay - show GLOBAL elements (page_number IS NULL) and LOCKED page-specific elements if not in design mode */}
       {/* Also check if design mode is active via URL */}
-      {/* Page-specific elements (page_number IS NOT NULL) are rendered inside the book pages */}
+      {/* Unlocked page-specific elements (page_number IS NOT NULL) are rendered inside the book pages */}
       {!isDesignMode && banners && banners.length > 0 && banners
-        .filter(banner => banner.page_number === null || banner.page_number === undefined)
+        .filter(banner => {
+          // Show global elements (page_number is null)
+          if (banner.page_number === null || banner.page_number === undefined) return true;
+          // Show locked page-specific elements (except textareas which are always in BookMenu)
+          if (banner.is_locked && banner.type !== 'textarea') return true;
+          // Don't show unlocked page-specific elements here (they're in BookMenu)
+          return false;
+        })
         .map((banner) => {
         // Load custom font if available
         const fontStyle = banner.font_family && banner.font_family !== 'JetBrains Mono' 
@@ -1082,25 +1108,85 @@ const BookMenu = ({ designMode, selectedTextElement, onTextElementClick, onTextE
 
         // Use fixed positioning for locked elements (doesn't move with scroll), absolute for others
         const positionType = banner.is_locked ? 'fixed' : 'absolute';
+        
+        // For locked page-specific elements, calculate position relative to viewport
+        let leftPos = banner.position_x || 0;
+        let topPos = banner.position_y || 0;
+        
+        if (banner.is_locked && banner.page_number !== null && banner.page_number !== undefined) {
+          // Try to find the page element and calculate its viewport position
+          const pageContainer = document.querySelector(`.book-page-container[data-page-index="${banner.page_number - 1}"]`);
+          const pageElement = pageContainer ? pageContainer.querySelector('.page') : null;
+          if (pageElement) {
+            const pageRect = pageElement.getBoundingClientRect();
+            // Convert page-relative position to viewport position
+            leftPos = pageRect.left + (banner.position_x || 0);
+            topPos = pageRect.top + (banner.position_y || 0);
+          }
+        }
 
         return (
-          <div
+          <LockedPageElement
             key={banner.id}
-            className="banner-overlay"
-            style={{
-              position: positionType,
-              left: `${banner.position_x || 0}px`,
-              top: `${banner.position_y || 0}px`,
-              transform: `rotate(${banner.rotation || 0}deg)`,
-              transformOrigin: 'center center',
-              width: banner.type === 'text' ? 'auto' : `${banner.width || 200}px`,
-              height: banner.type === 'text' ? 'auto' : `${banner.height || 200}px`,
-              minWidth: banner.type === 'text' ? `${banner.width || 200}px` : 'auto',
-              minHeight: banner.type === 'text' ? `${banner.height || 50}px` : 'auto',
-              zIndex: banner.z_index || 1,
-              pointerEvents: 'none'
-            }}
-          >
+            banner={banner}
+            positionType={positionType}
+            leftPos={leftPos}
+            topPos={topPos}
+            fontStyle={fontStyle}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+// Component to handle locked page-specific elements with dynamic position calculation
+const LockedPageElement = ({ banner, positionType, leftPos, topPos, fontStyle }) => {
+  const [position, setPosition] = React.useState({ left: leftPos, top: topPos });
+  
+  React.useEffect(() => {
+    // For locked page-specific elements, recalculate position on scroll/resize
+    if (banner.is_locked && banner.page_number !== null && banner.page_number !== undefined) {
+      const updatePosition = () => {
+        const pageContainer = document.querySelector(`.book-page-container[data-page-index="${banner.page_number - 1}"]`);
+        const pageElement = pageContainer ? pageContainer.querySelector('.page') : null;
+        if (pageElement) {
+          const pageRect = pageElement.getBoundingClientRect();
+          setPosition({
+            left: pageRect.left + (banner.position_x || 0),
+            top: pageRect.top + (banner.position_y || 0)
+          });
+        }
+      };
+      
+      updatePosition();
+      window.addEventListener('scroll', updatePosition);
+      window.addEventListener('resize', updatePosition);
+      
+      return () => {
+        window.removeEventListener('scroll', updatePosition);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [banner.is_locked, banner.page_number, banner.position_x, banner.position_y]);
+
+  return (
+    <div
+      className="banner-overlay"
+      style={{
+        position: positionType,
+        left: `${position.left}px`,
+        top: `${position.top}px`,
+        transform: `rotate(${banner.rotation || 0}deg)`,
+        transformOrigin: 'center center',
+        width: banner.type === 'text' ? 'auto' : `${banner.width || 200}px`,
+        height: banner.type === 'text' ? 'auto' : `${banner.height || 200}px`,
+        minWidth: banner.type === 'text' ? `${banner.width || 200}px` : 'auto',
+        minHeight: banner.type === 'text' ? `${banner.height || 50}px` : 'auto',
+        zIndex: banner.z_index || 1,
+        pointerEvents: 'none'
+      }}
+    >
             {banner.type === 'text' ? (
               <div
                 className="banner-text"
@@ -1129,7 +1215,7 @@ const BookMenu = ({ designMode, selectedTextElement, onTextElementClick, onTextE
               </div>
             ) : banner.type === 'gif' || banner.type === 'image' ? (
               <img
-                src={banner.url}
+                src={buildAssetUrl(banner.url)}
                 alt="Banner"
                 style={{ 
                   width: '100%', 
