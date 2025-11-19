@@ -10,7 +10,30 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({ origin: '*' })); // Temporaire
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increase JSON payload limit
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Increase URL-encoded payload limit
+
+// Increase timeout for all admin routes (including DELETE operations)
+// This must be BEFORE specific routes to apply to all admin endpoints
+app.use('/api/admin', (req, res, next) => {
+  req.setTimeout(60000); // 1 minute timeout for admin operations
+  res.setTimeout(60000);
+  next();
+});
+
+// Increase timeout for upload routes (Railway default is 30s, we need more for image processing)
+// These override the general admin timeout for uploads
+app.use('/api/admin/images', (req, res, next) => {
+  req.setTimeout(120000); // 2 minutes timeout for image upload
+  res.setTimeout(120000);
+  next();
+});
+
+app.use('/api/admin/fonts', (req, res, next) => {
+  req.setTimeout(60000); // 1 minute timeout for font upload
+  res.setTimeout(60000);
+  next();
+});
 
 // Database connection
 const dbConfig = {
@@ -1274,26 +1297,38 @@ const uploadToCloudinary = async (buffer, folder, options = {}) => {
   }
 
   console.log('☁️  Starting Cloudinary upload stream...');
+  const startTime = Date.now();
+  
   return new Promise((resolve, reject) => {
+    // Set timeout for Cloudinary upload (60 seconds)
+    const timeout = setTimeout(() => {
+      reject(new Error('Cloudinary upload timeout after 60 seconds'));
+    }, 60000);
+    
     const uploadOptions = {
       folder: folder,
       resource_type: 'auto',
       use_filename: false,
       unique_filename: true,
       overwrite: false,
+      timeout: 60000, // 60 seconds timeout
       ...options
     };
 
     console.log('   Upload options:', JSON.stringify(uploadOptions, null, 2));
 
     const uploadStream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+      clearTimeout(timeout);
+      const duration = Date.now() - startTime;
+      
       if (error) {
         console.error('❌ Cloudinary upload stream error:', error);
         console.error('   Error message:', error.message);
         console.error('   Error http_code:', error.http_code);
+        console.error(`   Upload failed after ${duration}ms`);
         reject(error);
       } else {
-        console.log(`✅ Uploaded to Cloudinary: ${result.secure_url}`);
+        console.log(`✅ Uploaded to Cloudinary in ${duration}ms: ${result.secure_url}`);
         console.log('   Result:', JSON.stringify({
           public_id: result.public_id,
           format: result.format,
@@ -1319,19 +1354,49 @@ const optimizeImage = async (buffer, maxWidth = 1920, quality = 85) => {
       return buffer;
     }
     
+    // Skip optimization for very small images (< 500KB) to save time
+    if (buffer.length < 500 * 1024) {
+      console.log('⏩ Image is small (< 500KB), skipping optimization');
+      return buffer;
+    }
+    
+    const startTime = Date.now();
     const image = sharp(buffer);
     const metadata = await image.metadata();
     
-    // Resize if too large
-    if (metadata.width > maxWidth) {
-      image.resize(maxWidth, null, { withoutEnlargement: true });
+    // Skip optimization if already small dimensions
+    if (metadata.width && metadata.width <= maxWidth && buffer.length < 1024 * 1024) {
+      console.log('⏩ Image dimensions are acceptable, skipping optimization');
+      return buffer;
+    }
+    
+    let processedImage = image;
+    
+    // Resize if too large (only if significantly larger)
+    if (metadata.width && metadata.width > maxWidth) {
+      processedImage = processedImage.resize(maxWidth, null, { 
+        withoutEnlargement: true,
+        fastShrinkOnLoad: true // Faster resizing
+      });
     }
     
     // Convert to WebP for better compression (fallback to JPEG if WebP not supported)
-    return await image
-      .webp({ quality: quality })
+    // Use faster compression settings
+    const optimized = await processedImage
+      .webp({ 
+        quality: quality,
+        effort: 4 // Lower effort = faster (0-6, default is 4)
+      })
       .toBuffer()
-      .catch(() => image.jpeg({ quality: quality }).toBuffer());
+      .catch(() => processedImage.jpeg({ 
+        quality: quality,
+        mozjpeg: true // Faster JPEG encoding
+      }).toBuffer());
+    
+    const duration = Date.now() - startTime;
+    console.log(`✅ Image optimized in ${duration}ms (${((buffer.length - optimized.length) / 1024).toFixed(2)} KB saved)`);
+    
+    return optimized;
   } catch (error) {
     console.error('⚠️  Image optimization error:', error.message);
     console.error('   Returning original buffer without optimization');
@@ -1584,18 +1649,25 @@ app.post('/api/admin/images', authenticateToken, imageUpload.single('image'), as
     
     let optimizedBuffer = originalBuffer;
 
-    // Optimize image before upload (reduce size)
+    // Optimize image before upload (reduce size) - with timeout protection
     if (req.file.mimetype.startsWith('image/') && !req.file.mimetype.includes('svg')) {
       try {
-        optimizedBuffer = await optimizeImage(originalBuffer, 1920, 85);
+        // Set a timeout for optimization (10 seconds max)
+        const optimizationPromise = optimizeImage(originalBuffer, 1920, 85);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Optimization timeout')), 10000)
+        );
+        
+        optimizedBuffer = await Promise.race([optimizationPromise, timeoutPromise]);
         console.log('✅ Image optimized:', {
           original: (originalBuffer.length / 1024).toFixed(2) + ' KB',
           optimized: (optimizedBuffer.length / 1024).toFixed(2) + ' KB',
           reduction: ((1 - optimizedBuffer.length / originalBuffer.length) * 100).toFixed(1) + '%'
         });
       } catch (optError) {
-        console.error('⚠️  Image optimization error:', optError.message);
-        optimizedBuffer = originalBuffer; // Use original if optimization fails
+        console.error('⚠️  Image optimization error or timeout:', optError.message);
+        console.log('   Using original image without optimization');
+        optimizedBuffer = originalBuffer; // Use original if optimization fails or times out
       }
     }
 
@@ -1603,17 +1675,22 @@ app.post('/api/admin/images', authenticateToken, imageUpload.single('image'), as
     if (useCloudinary) {
       console.log('\n☁️  ATTEMPTING CLOUDINARY UPLOAD...');
       try {
+        // Upload to Cloudinary with minimal options (image is already optimized by Sharp)
         const result = await uploadToCloudinary(optimizedBuffer, 'images', {
-          public_id: `img_${Date.now()}`,
-          format: 'auto', // Auto format (WebP if supported by browser)
-          quality: 'auto:good', // Auto quality optimization (good balance)
-          fetch_format: 'auto', // Serve best format for browser
-          transformation: [
-            { width: 1920, crop: 'limit' }, // Max width 1920px
-            { quality: 'auto:good' } // Auto quality
-          ]
+          public_id: `img_${Date.now()}`
+          // Don't specify format, width, crop, or quality here - they cause errors
+          // The image is already optimized by Sharp before upload
         });
-        filePath = result.secure_url;
+        
+        // Modify URL to add transformations for optimal delivery
+        // This allows Cloudinary to serve optimized images (WebP if supported, max width 1920px)
+        let cloudinaryUrl = result.secure_url;
+        // Add transformations: f_auto (format auto), w_1920 (max width), q_auto:good (quality)
+        // Format: https://res.cloudinary.com/.../image/upload/[transformations]/v123/...
+        if (cloudinaryUrl.includes('/upload/')) {
+          cloudinaryUrl = cloudinaryUrl.replace('/upload/', '/upload/w_1920,c_limit,q_auto:good,f_auto/');
+        }
+        filePath = cloudinaryUrl;
         storageType = 'cloudinary';
         console.log('✅✅✅ SUCCESS: Image uploaded to Cloudinary!');
         console.log('   URL:', filePath);
