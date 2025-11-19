@@ -1,0 +1,13 @@
+[phases.setup]
+nixPkgs = ["nodejs-18.x"]
+
+[phases.install]
+# Use npm install instead of npm ci to avoid lock file sync issues
+cmds = ["npm install --legacy-peer-deps"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npx serve -s build -l 3000"
+
