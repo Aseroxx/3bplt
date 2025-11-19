@@ -1530,9 +1530,21 @@ app.post('/api/admin/fonts', authenticateToken, fontUpload.single('font'), async
 
 // Image upload endpoint
 app.post('/api/admin/images', authenticateToken, imageUpload.single('image'), async (req, res) => {
-  console.log('📤 Image upload endpoint called');
-  console.log('   File received:', req.file ? `${req.file.originalname} (${(req.file.size / 1024).toFixed(2)} KB)` : 'NO FILE');
-  console.log('   useCloudinary status:', useCloudinary);
+  console.log('\n========================================');
+  console.log('📤 IMAGE UPLOAD ENDPOINT CALLED');
+  console.log('========================================');
+  console.log('File received:', req.file ? `${req.file.originalname} (${(req.file.size / 1024).toFixed(2)} KB)` : 'NO FILE');
+  console.log('MIME type:', req.file?.mimetype || 'N/A');
+  console.log('useCloudinary:', useCloudinary ? '✅ TRUE' : '❌ FALSE');
+  
+  // Log Cloudinary config status
+  if (!useCloudinary) {
+    console.log('\n⚠️  CLOUDINARY NOT CONFIGURED - CHECK ENVIRONMENT VARIABLES:');
+    console.log('   CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? '✅ Set' : '❌ Missing');
+    console.log('   CLOUDINARY_API_KEY:', process.env.CLOUDINARY_API_KEY ? '✅ Set' : '❌ Missing');
+    console.log('   CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? '✅ Set' : '❌ Missing');
+  }
+  console.log('========================================\n');
   
   try {
     if (req.user.role !== 'admin') {
@@ -1546,17 +1558,19 @@ app.post('/api/admin/images', authenticateToken, imageUpload.single('image'), as
     }
 
     let filePath;
+    let storageType = 'local'; // 'cloudinary' or 'local'
+    let cloudinaryError = null;
     
     // Get file buffer (from memory storage) or read from disk
     let originalBuffer;
     try {
       if (req.file.buffer) {
         originalBuffer = req.file.buffer;
-        console.log('   Using memory buffer (size:', (originalBuffer.length / 1024).toFixed(2), 'KB)');
+        console.log('✅ Using memory buffer (size:', (originalBuffer.length / 1024).toFixed(2), 'KB)');
       } else if (req.file.path) {
         // Read from disk if using disk storage
         originalBuffer = fs.readFileSync(req.file.path);
-        console.log('   Read from disk (path:', req.file.path, ', size:', (originalBuffer.length / 1024).toFixed(2), 'KB)');
+        console.log('✅ Read from disk (path:', req.file.path, ', size:', (originalBuffer.length / 1024).toFixed(2), 'KB)');
       } else {
         throw new Error('No file buffer or path available');
       }
@@ -1574,21 +1588,20 @@ app.post('/api/admin/images', authenticateToken, imageUpload.single('image'), as
     if (req.file.mimetype.startsWith('image/') && !req.file.mimetype.includes('svg')) {
       try {
         optimizedBuffer = await optimizeImage(originalBuffer, 1920, 85);
-        console.log('Image optimized:', {
+        console.log('✅ Image optimized:', {
           original: (originalBuffer.length / 1024).toFixed(2) + ' KB',
           optimized: (optimizedBuffer.length / 1024).toFixed(2) + ' KB',
           reduction: ((1 - optimizedBuffer.length / originalBuffer.length) * 100).toFixed(1) + '%'
         });
       } catch (optError) {
-        console.error('Image optimization error:', optError);
+        console.error('⚠️  Image optimization error:', optError.message);
         optimizedBuffer = originalBuffer; // Use original if optimization fails
       }
     }
 
     // Upload to Cloudinary (preferred) or use local storage as fallback
-    console.log('🔍 Upload check - useCloudinary:', useCloudinary);
     if (useCloudinary) {
-      console.log('☁️  Attempting to upload to Cloudinary...');
+      console.log('\n☁️  ATTEMPTING CLOUDINARY UPLOAD...');
       try {
         const result = await uploadToCloudinary(optimizedBuffer, 'images', {
           public_id: `img_${Date.now()}`,
@@ -1601,50 +1614,76 @@ app.post('/api/admin/images', authenticateToken, imageUpload.single('image'), as
           ]
         });
         filePath = result.secure_url;
-        console.log('✅ Image uploaded to Cloudinary (optimized):', filePath);
+        storageType = 'cloudinary';
+        console.log('✅✅✅ SUCCESS: Image uploaded to Cloudinary!');
+        console.log('   URL:', filePath);
         console.log('   Format:', result.format, '| Size:', (result.bytes / 1024).toFixed(2), 'KB');
         // Clean up temporary file if using disk storage
         if (req.file.path && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
+          console.log('   Temporary file cleaned up');
         }
-      } catch (cloudinaryError) {
-        console.error('❌ Cloudinary upload failed:', cloudinaryError);
-        console.error('   Error details:', cloudinaryError.message);
-        console.error('   Stack:', cloudinaryError.stack);
+      } catch (err) {
+        cloudinaryError = err;
+        console.error('\n❌❌❌ CLOUDINARY UPLOAD FAILED!');
+        console.error('   Error:', err.message);
+        console.error('   HTTP Code:', err.http_code || 'N/A');
+        console.error('   Error Name:', err.name || 'N/A');
+        if (err.stack) {
+          console.error('   Stack:', err.stack);
+        }
         // Fallback to local storage only if Cloudinary fails
-        console.log('⚠️  Falling back to local storage...');
+        console.log('\n⚠️  FALLING BACK TO LOCAL STORAGE...');
         const uniqueName = `${Date.now()}-${req.file.originalname}`;
         const localPath = path.join(imagesDir, uniqueName);
         if (!fs.existsSync(localPath)) {
           fs.writeFileSync(localPath, optimizedBuffer);
         }
         filePath = `/uploads/images/${uniqueName}`;
+        storageType = 'local';
         console.log('📁 Image saved locally (Cloudinary fallback):', filePath);
       }
     } else {
       // Local storage with optimized image (Cloudinary not configured)
-      console.log('📁 Cloudinary not configured, using local storage');
+      console.log('\n📁 CLOUDINARY NOT CONFIGURED - USING LOCAL STORAGE');
       const uniqueName = `${Date.now()}-${req.file.originalname}`;
       const localPath = path.join(imagesDir, uniqueName);
       if (!fs.existsSync(localPath)) {
         fs.writeFileSync(localPath, optimizedBuffer);
       }
       filePath = `/uploads/images/${uniqueName}`;
+      storageType = 'local';
       console.log('📁 Image saved locally (optimized):', filePath);
     }
 
-    console.log('📤 Sending response - filePath:', filePath);
-    console.log('   Is Cloudinary URL?', filePath && filePath.startsWith('https://res.cloudinary.com'));
+    console.log('\n========================================');
+    console.log('📤 SENDING RESPONSE');
+    console.log('   Storage Type:', storageType.toUpperCase());
+    console.log('   File Path:', filePath);
+    console.log('   Is Cloudinary URL?', filePath && filePath.startsWith('https://res.cloudinary.com') ? '✅ YES' : '❌ NO');
+    if (cloudinaryError) {
+      console.log('   ⚠️  Cloudinary Error:', cloudinaryError.message);
+    }
+    console.log('========================================\n');
     
     res.status(201).json({
       message: 'Image uploaded successfully',
-      image: { url: filePath, path: filePath }
+      image: { 
+        url: filePath, 
+        path: filePath 
+      },
+      storage: {
+        type: storageType,
+        isCloudinary: storageType === 'cloudinary',
+        cloudinaryError: cloudinaryError ? cloudinaryError.message : null
+      }
     });
   } catch (error) {
-    console.error('❌ Upload image error:', error);
+    console.error('\n❌❌❌ UPLOAD IMAGE ERROR:');
     console.error('   Error name:', error.name);
     console.error('   Error message:', error.message);
     console.error('   Error stack:', error.stack);
+    console.error('========================================\n');
     res.status(500).json({ 
       error: 'Internal server error',
       details: error.message || 'Unknown error',
