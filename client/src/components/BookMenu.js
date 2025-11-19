@@ -53,6 +53,99 @@ const buildAssetUrl = (path) => {
   return path;
 };
 
+// Component to handle locked page-specific elements with dynamic position calculation
+const LockedPageElement = ({ banner, positionType, leftPos, topPos, fontStyle }) => {
+  const [position, setPosition] = useState({ left: leftPos, top: topPos });
+  
+  useEffect(() => {
+    // For locked page-specific elements, recalculate position on scroll/resize
+    if (banner.is_locked && banner.page_number !== null && banner.page_number !== undefined) {
+      const updatePosition = () => {
+        const pageContainer = document.querySelector(`.book-page-container[data-page-index="${banner.page_number - 1}"]`);
+        const pageElement = pageContainer ? pageContainer.querySelector('.page') : null;
+        if (pageElement) {
+          const pageRect = pageElement.getBoundingClientRect();
+          setPosition({
+            left: pageRect.left + (banner.position_x || 0),
+            top: pageRect.top + (banner.position_y || 0)
+          });
+        }
+      };
+      
+      updatePosition();
+      window.addEventListener('scroll', updatePosition);
+      window.addEventListener('resize', updatePosition);
+      
+      return () => {
+        window.removeEventListener('scroll', updatePosition);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [banner.is_locked, banner.page_number, banner.position_x, banner.position_y]);
+
+  return (
+    <div
+      className="banner-overlay"
+      style={{
+        position: positionType,
+        left: `${position.left}px`,
+        top: `${position.top}px`,
+        transform: `rotate(${banner.rotation || 0}deg)`,
+        transformOrigin: 'center center',
+        width: banner.type === 'text' ? 'auto' : `${banner.width || 200}px`,
+        height: banner.type === 'text' ? 'auto' : `${banner.height || 200}px`,
+        minWidth: banner.type === 'text' ? `${banner.width || 200}px` : 'auto',
+        minHeight: banner.type === 'text' ? `${banner.height || 50}px` : 'auto',
+        zIndex: banner.z_index || 1,
+        pointerEvents: 'none'
+      }}
+    >
+      {banner.type === 'text' ? (
+        <div
+          className="banner-text"
+          style={{
+            ...fontStyle,
+            fontSize: `${banner.font_size || 16}px`,
+            fontWeight: banner.font_weight || 'normal',
+            fontStyle: banner.font_style || 'normal',
+            color: banner.color || '#ff00ff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            width: 'auto',
+            height: 'auto',
+            minWidth: `${banner.width || 200}px`,
+            minHeight: `${banner.height || 50}px`,
+            wordWrap: 'break-word',
+            whiteSpace: 'pre-wrap',
+            overflow: 'visible',
+            padding: '5px',
+            ...getVisualEffectsStyles(banner)
+          }}
+        >
+          {banner.text_content}
+        </div>
+      ) : banner.type === 'gif' || banner.type === 'image' ? (
+        <img
+          src={buildAssetUrl(banner.url)}
+          alt="Banner"
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            objectFit: 'contain',
+            ...getVisualEffectsStyles(banner)
+          }}
+        />
+      ) : (
+        <div className="banner-text" style={{ width: '100%', height: '100%' }}>
+          {banner.url}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BookMenu = ({ designMode, selectedTextElement, onTextElementClick, onTextElementMouseDown, onTextElementContextMenu, pages: pagesProp, banners: bannersProp, textStyles: textStylesProp, siteTexts: siteTextsProp }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -1134,102 +1227,6 @@ const BookMenu = ({ designMode, selectedTextElement, onTextElementClick, onTextE
             topPos={topPos}
             fontStyle={fontStyle}
           />
-        );
-      })}
-    </div>
-  );
-};
-
-// Component to handle locked page-specific elements with dynamic position calculation
-const LockedPageElement = ({ banner, positionType, leftPos, topPos, fontStyle }) => {
-  const [position, setPosition] = React.useState({ left: leftPos, top: topPos });
-  
-  React.useEffect(() => {
-    // For locked page-specific elements, recalculate position on scroll/resize
-    if (banner.is_locked && banner.page_number !== null && banner.page_number !== undefined) {
-      const updatePosition = () => {
-        const pageContainer = document.querySelector(`.book-page-container[data-page-index="${banner.page_number - 1}"]`);
-        const pageElement = pageContainer ? pageContainer.querySelector('.page') : null;
-        if (pageElement) {
-          const pageRect = pageElement.getBoundingClientRect();
-          setPosition({
-            left: pageRect.left + (banner.position_x || 0),
-            top: pageRect.top + (banner.position_y || 0)
-          });
-        }
-      };
-      
-      updatePosition();
-      window.addEventListener('scroll', updatePosition);
-      window.addEventListener('resize', updatePosition);
-      
-      return () => {
-        window.removeEventListener('scroll', updatePosition);
-        window.removeEventListener('resize', updatePosition);
-      };
-    }
-  }, [banner.is_locked, banner.page_number, banner.position_x, banner.position_y]);
-
-  return (
-    <div
-      className="banner-overlay"
-      style={{
-        position: positionType,
-        left: `${position.left}px`,
-        top: `${position.top}px`,
-        transform: `rotate(${banner.rotation || 0}deg)`,
-        transformOrigin: 'center center',
-        width: banner.type === 'text' ? 'auto' : `${banner.width || 200}px`,
-        height: banner.type === 'text' ? 'auto' : `${banner.height || 200}px`,
-        minWidth: banner.type === 'text' ? `${banner.width || 200}px` : 'auto',
-        minHeight: banner.type === 'text' ? `${banner.height || 50}px` : 'auto',
-        zIndex: banner.z_index || 1,
-        pointerEvents: 'none'
-      }}
-    >
-            {banner.type === 'text' ? (
-              <div
-                className="banner-text"
-                style={{
-                  ...fontStyle,
-                  fontSize: `${banner.font_size || 16}px`,
-                  fontWeight: banner.font_weight || 'normal',
-                  fontStyle: banner.font_style || 'normal',
-                  color: banner.color || '#ff00ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  width: 'auto',
-                  height: 'auto',
-                  minWidth: `${banner.width || 200}px`,
-                  minHeight: `${banner.height || 50}px`,
-                  wordWrap: 'break-word',
-                  whiteSpace: 'pre-wrap',
-                  overflow: 'visible',
-                  padding: '5px',
-                  ...getVisualEffectsStyles(banner)
-                }}
-              >
-                {banner.text_content}
-              </div>
-            ) : banner.type === 'gif' || banner.type === 'image' ? (
-              <img
-                src={buildAssetUrl(banner.url)}
-                alt="Banner"
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  objectFit: 'contain',
-                  ...getVisualEffectsStyles(banner)
-                }}
-              />
-            ) : (
-              <div className="banner-text" style={{ width: '100%', height: '100%' }}>
-                {banner.url}
-              </div>
-            )}
-          </div>
         );
       })}
     </div>

@@ -1254,13 +1254,14 @@ const uploadsDir = path.join(__dirname, 'uploads');
 const fontsDir = path.join(uploadsDir, 'fonts');
 const imagesDir = path.join(uploadsDir, 'images');
 
-if (!useCloudinary) {
-  if (!fs.existsSync(fontsDir)) {
-    fs.mkdirSync(fontsDir, { recursive: true });
-  }
-  if (!fs.existsSync(imagesDir)) {
-    fs.mkdirSync(imagesDir, { recursive: true });
-  }
+// Always create upload directories (needed for fallback even if using Cloudinary)
+if (!fs.existsSync(fontsDir)) {
+  fs.mkdirSync(fontsDir, { recursive: true });
+  console.log('📁 Created fonts directory');
+}
+if (!fs.existsSync(imagesDir)) {
+  fs.mkdirSync(imagesDir, { recursive: true });
+  console.log('📁 Created images directory');
 }
 
 // Helper function to upload to Cloudinary
@@ -1312,6 +1313,12 @@ const uploadToCloudinary = async (buffer, folder, options = {}) => {
 // Helper function to optimize image before upload
 const optimizeImage = async (buffer, maxWidth = 1920, quality = 85) => {
   try {
+    // Check if sharp is available
+    if (!sharp) {
+      console.warn('⚠️  Sharp not available, skipping optimization');
+      return buffer;
+    }
+    
     const image = sharp(buffer);
     const metadata = await image.metadata();
     
@@ -1326,7 +1333,8 @@ const optimizeImage = async (buffer, maxWidth = 1920, quality = 85) => {
       .toBuffer()
       .catch(() => image.jpeg({ quality: quality }).toBuffer());
   } catch (error) {
-    console.error('Image optimization error:', error);
+    console.error('⚠️  Image optimization error:', error.message);
+    console.error('   Returning original buffer without optimization');
     return buffer; // Return original if optimization fails
   }
 };
@@ -1541,11 +1549,23 @@ app.post('/api/admin/images', authenticateToken, imageUpload.single('image'), as
     
     // Get file buffer (from memory storage) or read from disk
     let originalBuffer;
-    if (req.file.buffer) {
-      originalBuffer = req.file.buffer;
-    } else {
-      // Read from disk if using disk storage
-      originalBuffer = fs.readFileSync(req.file.path);
+    try {
+      if (req.file.buffer) {
+        originalBuffer = req.file.buffer;
+        console.log('   Using memory buffer (size:', (originalBuffer.length / 1024).toFixed(2), 'KB)');
+      } else if (req.file.path) {
+        // Read from disk if using disk storage
+        originalBuffer = fs.readFileSync(req.file.path);
+        console.log('   Read from disk (path:', req.file.path, ', size:', (originalBuffer.length / 1024).toFixed(2), 'KB)');
+      } else {
+        throw new Error('No file buffer or path available');
+      }
+    } catch (bufferError) {
+      console.error('❌ Error reading file buffer:', bufferError);
+      return res.status(500).json({ 
+        error: 'Failed to read uploaded file',
+        details: bufferError.message 
+      });
     }
     
     let optimizedBuffer = originalBuffer;
@@ -1621,8 +1641,15 @@ app.post('/api/admin/images', authenticateToken, imageUpload.single('image'), as
       image: { url: filePath, path: filePath }
     });
   } catch (error) {
-    console.error('Upload image error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Upload image error:', error);
+    console.error('   Error name:', error.name);
+    console.error('   Error message:', error.message);
+    console.error('   Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message || 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
