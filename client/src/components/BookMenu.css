@@ -7,14 +7,13 @@
 }
 
 .book-container::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
-    repeating-linear-gradient(
+  background: repeating-linear-gradient(
       0deg,
       rgba(255, 0, 255, 0.03) 0px,
       transparent 1px,
@@ -52,14 +51,6 @@
   gap: 8px;
 }
 
-.btn {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-
 .terminal-title {
   color: #ff00ff;
   font-size: 12px;
@@ -78,6 +69,8 @@
   color: #ff00ff;
   font-size: 12px;
   letter-spacing: 1px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .logout-btn {
@@ -85,7 +78,7 @@
   border: 1px solid #ff00ff;
   color: #ff00ff;
   padding: 5px 15px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: "JetBrains Mono", "Courier New", monospace;
   font-size: 11px;
   cursor: pointer;
   transition: all 0.3s;
@@ -110,7 +103,7 @@
   perspective: 2500px;
   min-height: 70vh;
   padding: 20px;
-  overflow: visible !important; /* Allow elements to extend beyond wrapper */
+  overflow: visible !important;
 }
 
 .book {
@@ -120,7 +113,7 @@
   position: relative;
   transform-style: preserve-3d;
   display: flex;
-  overflow: visible !important; /* Allow elements to extend beyond book boundaries */
+  overflow: visible !important;
 }
 
 .book-page-container {
@@ -129,19 +122,19 @@
   height: 100%;
   transform-style: preserve-3d;
   transition: transform 1.2s cubic-bezier(0.645, 0.045, 0.355, 1);
-  overflow: visible !important; /* ✅ AJOUTÉ */
+  overflow: visible !important;
 }
 
 .book-page-container.left {
   left: 0;
   transform-origin: right center;
-  z-index: 1; /* Left page has lower z-index */
+  z-index: 1;
 }
 
 .book-page-container.right {
   right: 0;
   transform-origin: left center;
-  z-index: 2; /* Right page has higher z-index to appear above left page */
+  z-index: 2;
 }
 
 .book-page-container.turned {
@@ -160,7 +153,7 @@
   border: 3px solid #ff00ff;
   box-shadow: 0 10px 60px rgba(0, 0, 0, 0.8);
   backface-visibility: hidden;
-  overflow: visible !important; /* ✅ CHANGÉ: permet débordement */
+  overflow: visible !important;
   border-radius: 2px;
   position: relative;
 }
@@ -174,20 +167,19 @@
 }
 
 .page::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 98%,
-      rgba(255, 0, 255, 0.1) 99%,
-      rgba(255, 0, 255, 0.1) 100%
-    );
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 98%,
+    rgba(255, 0, 255, 0.1) 99%,
+    rgba(255, 0, 255, 0.1) 100%
+  );
   pointer-events: none;
   z-index: 1;
 }
@@ -199,10 +191,17 @@
   flex-direction: column;
   position: relative;
   z-index: 2;
-  overflow: visible !important; /* ✅ CHANGÉ: permet débordement */
-  background: 
-    radial-gradient(circle at top left, rgba(255, 0, 255, 0.02) 0%, transparent 50%),
-    radial-gradient(circle at bottom right, rgba(255, 0, 255, 0.02) 0%, transparent 50%);
+  overflow: visible !important;
+  background: radial-gradient(
+      circle at top left,
+      rgba(255, 0, 255, 0.02) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(255, 0, 255, 0.02) 0%,
+      transparent 50%
+    );
 }
 
 .page-header {
@@ -231,14 +230,14 @@
 
 .page-body {
   flex: 1;
-  overflow: visible !important; /* ✅ CHANGÉ: permet débordement au lieu de overflow-y: auto */
+  overflow: visible !important;
   padding-right: 10px;
-  position: relative; /* ✅ AJOUTÉ */
+  position: relative;
 }
 
 .terminal-text {
   color: #ff00ff;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: "JetBrains Mono", "Courier New", monospace;
   font-size: 14px;
   line-height: 1.8;
   white-space: pre-wrap;
@@ -255,7 +254,7 @@
   color: #ff00ff;
   font-size: 11px;
   letter-spacing: 1px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: "JetBrains Mono", "Courier New", monospace;
   opacity: 0.7;
 }
 
@@ -272,7 +271,7 @@
   border: 2px solid #ff00ff;
   color: #ff00ff;
   padding: 15px 30px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: "JetBrains Mono", "Courier New", monospace;
   font-size: 14px;
   font-weight: bold;
   text-transform: uppercase;
@@ -287,7 +286,7 @@
 }
 
 .nav-button::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
@@ -358,40 +357,39 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(255, 0, 255, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 40% 20%, rgba(255, 0, 255, 0.05) 0%, transparent 50%),
-    linear-gradient(45deg, transparent 48%, rgba(255, 0, 255, 0.02) 49%, rgba(255, 0, 255, 0.02) 51%, transparent 52%),
-    linear-gradient(-45deg, transparent 48%, rgba(255, 0, 255, 0.02) 49%, rgba(255, 0, 255, 0.02) 51%, transparent 52%);
-  background-size: 
-    100% 100%,
-    100% 100%,
-    100% 100%,
-    50px 50px,
-    50px 50px;
+  background-image: radial-gradient(
+      circle at 20% 50%,
+      rgba(255, 0, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(255, 0, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 20%,
+      rgba(255, 0, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      45deg,
+      transparent 48%,
+      rgba(255, 0, 255, 0.02) 49%,
+      rgba(255, 0, 255, 0.02) 51%,
+      transparent 52%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 48%,
+      rgba(255, 0, 255, 0.02) 49%,
+      rgba(255, 0, 255, 0.02) 51%,
+      transparent 52%
+    );
+  background-size: 100% 100%, 100% 100%, 100% 100%, 50px 50px, 50px 50px;
   pointer-events: none;
   z-index: 1;
   opacity: 0.6;
-}
-
-/* Scrollbar styling */
-.page-body::-webkit-scrollbar {
-  width: 8px;
-}
-
-.page-body::-webkit-scrollbar-track {
-  background: #0a0a0a;
-  border: 1px solid #ff00ff;
-}
-
-.page-body::-webkit-scrollbar-thumb {
-  background: #ff00ff;
-  border-radius: 4px;
-}
-
-.page-body::-webkit-scrollbar-thumb:hover {
-  background: #ff00ff;
 }
 
 .admin-link {
@@ -404,7 +402,7 @@
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 1px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: "JetBrains Mono", "Courier New", monospace;
 }
 
 .admin-link:hover {
@@ -417,7 +415,7 @@
 
 .banner-text {
   color: #ff00ff;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: "JetBrains Mono", "Courier New", monospace;
   font-size: 14px;
   text-align: center;
   display: flex;
@@ -425,30 +423,303 @@
   justify-content: center;
   border: none;
   background: transparent;
-  wordWrap: 'break-word';
-  whiteSpace: 'pre-wrap';
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
+
+/* ========================================
+   MOBILE RESPONSIVE STYLES - VERSION AMÃ‰LIORÃ‰E
+   ======================================== */
 
 @media (max-width: 768px) {
-  .book {
-    height: 500px;
+  .book-container {
+    padding: 10px;
+    overflow-x: hidden;
+  }
+
+  /* Masquer les pages droites par défaut */
+  .book-page-container.right {
+    display: none !important;
+    width: 100% !important;
+    left: 0 !important;
+    right: auto !important;
+    position: relative !important;
+  }
+
+  /* MAIS laisser visible uniquement la page droite courante */
+  .book-page-container.right.current {
+    display: block !important;
   }
   
+  /* Désactive tout ce qui crée du flou */
+  .book-page-container,
+  .page,
   .page-content {
-    padding: 20px;
+    transform: none !important;
+    perspective: none !important;
+    backface-visibility: visible !important;
   }
-  
+
+  .book {
+    transform-style: flat !important;
+  }
+
+  .book-wrapper {
+    padding: 10px 5px;
+    gap: 20px;
+    overflow: visible;
+  }
+
+  /* UNE SEULE PAGE VISIBLE SUR MOBILE */
+  .book {
+    width: 100%;
+    max-width: 420px;
+    height: 650px; /* fixe */
+    min-height: 550px;
+    aspect-ratio: 0.7; /* Format portrait */
+  }
+
+  /* La page de gauche prend toute la largeur */
+  .book-page-container.left {
+    width: 100% !important;
+    position: relative !important;
+    left: 0;
+    transform: none !important;
+  }
+
+  .page {
+    border: 2px solid #ff00ff;
+    height: 100%;
+    transform: none !important;
+  }
+
+  .page-content {
+    padding: 25px 20px;
+    height: 100%;
+  }
+
+  /* HEADER DE PAGE - Mieux centré et adapté */
+  .page-header {
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .page-number {
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
   .page-title {
-    font-size: 14px;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    line-height: 1.4;
+    text-align: right;
+    flex: 1;
   }
-  
+
+  /* CONTENU DE PAGE - Textareas adaptées */
+  .page-body {
+    padding-right: 5px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
   .terminal-text {
     font-size: 12px;
+    line-height: 1.7;
   }
-  
+
+  /* TEXTAREAS - Taille adaptée au mobile */
+  .page-body .page-textarea {
+    width: 100% !important;
+    max-width: calc(100% - 10px) !important;
+    height: 100% !important;
+    /* min-height: 300px !important; */
+    max-height: 460px !important;
+    font-size: 11px !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
+    /* Centrage automatique */
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    transform: none !important;
+    margin: 10px auto !important;
+  }
+
+  /* FOOTER DE PAGE */
+  .page-footer {
+    padding-top: 15px;
+    margin-top: auto;
+  }
+
+  .system-info {
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    word-wrap: break-word;
+  }
+
+  /* Ã‰LÃ‰MENTS DANS LES PAGES - RÃ©duction intelligente */
+  /* Container de clipping ajusté */
+  .page-body > div[style*="overflow: hidden"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+    top: 0 !important;
+    transform: none !important;
+  }
+
+  /* Textes et images dans les pages */
+  .page-text-element {
+    max-width: 90% !important;
+    font-size: clamp(10px, 3vw, 14px) !important;
+    word-wrap: break-word;
+  }
+
+  /* Images dans les pages */
+  .page-body img:not(.page-textarea img) {
+    max-width: 80% !important;
+    max-height: 200px !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+
+  /* Ã‰LÃ‰MENTS GLOBAUX (hors pages) - Au-dessus du livre */
+  .banner-overlay {
+    position: relative !important;
+    display: block !important;
+    margin: 10px auto !important;
+    max-width: 90vw !important;
+    left: auto !important;
+    top: auto !important;
+    filter: none !important;
+  }
+
+  .banner-overlay img {
+    max-width: 100% !important;
+    max-height: 250px !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    display: block;
+    margin: 0 auto;
+    filter: none !important;
+  }
+
+  .banner-text {
+    font-size: 13px !important;
+    padding: 10px !important;
+    max-width: 100% !important;
+    word-wrap: break-word;
+    text-align: center;
+    filter: none !important;
+  }
+
+  /* CONTRÔLES DE NAVIGATION */
+  .book-controls {
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 15px 10px;
+  }
+
   .nav-button {
-    padding: 10px 20px;
+    padding: 12px 20px;
     font-size: 12px;
+    letter-spacing: 1px;
+    gap: 8px;
+    min-width: 100px;
+    flex: 0 1 auto;
+  }
+
+  .arrow {
+    font-size: 18px;
+  }
+
+  .page-indicator {
+    gap: 10px;
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Effets visuels réduits */
+  .circuit-overlay {
+    opacity: 0.3;
+  }
+
+  .book-container::before {
+    opacity: 0.4;
   }
 }
 
+/* TRÃˆS PETITS Ã‰CRANS (< 480px) */
+@media (max-width: 480px) {
+  .book {
+    width: 98vw;
+    max-width: 350px;
+    min-height: 500px;
+  }
+
+  .page-content {
+    padding: 20px 15px;
+  }
+
+  .page-title {
+    font-size: 13px;
+  }
+
+  .terminal-text {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .page-body .page-textarea {
+    min-height: 250px !important;
+    font-size: 10px !important;
+    padding: 8px !important;
+  }
+
+  .banner-overlay img {
+    max-height: 200px !important;
+    filter: none !important;
+  }
+
+  .banner-text {
+    font-size: 12px !important;
+    filter: none !important;
+  }
+}
+
+/* MODE PAYSAGE MOBILE */
+@media (max-width: 900px) and (orientation: landscape) {
+  .book {
+    height: auto;
+    min-height: 400px;
+    max-height: 70vh;
+  }
+
+  .page-content {
+    padding: 15px 12px;
+  }
+
+  .page-body .page-textarea {
+    min-height: 200px !important;
+    max-height: 250px !important;
+  }
+
+  .banner-overlay img {
+    max-height: 150px !important;
+    filter: none !important;
+  }
+}

@@ -843,3 +843,33 @@
   opacity: 1;
 }
 
+/* MOBILE RESPONSIVE POUR DESIGN MODE */
+@media (max-width: 768px) {
+  .floating-tools {
+    top: 10px;
+    left: 10px;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .floating-tool-btn {
+    padding: 8px 12px;
+    font-size: 10px;
+    min-width: 90px;
+  }
+
+  .design-modal {
+    min-width: 90vw !important;
+    max-width: 95vw !important;
+    max-height: 85vh;
+    margin: 10px;
+  }
+
+  .modal-content {
+    padding: 15px;
+  }
+
+  .property-slider {
+    width: 100%;
+  }
+}
